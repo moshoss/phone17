@@ -1,0 +1,87 @@
+type DateInput = Date | string | number
+
+const MS_PER_SECOND = 1000
+const MS_PER_MINUTE = MS_PER_SECOND * 60
+const MS_PER_HOUR = MS_PER_MINUTE * 60
+const MS_PER_DAY = MS_PER_HOUR * 24
+
+const pad = (n: number): string => String(n).padStart(2, '0')
+
+export const getYMD = (date?: DateInput): [number, number, number, number, number, number] => {
+  const _date = new Date(date ?? Date.now())
+  const y = _date.getFullYear()
+  const m = _date.getMonth()
+  const d = _date.getDate()
+  const h = _date.getHours()
+  const mm = _date.getMinutes()
+  const s = _date.getSeconds()
+  return [y, m, d, h, mm, s]
+}
+
+export const addMonths = (date: DateInput, diff: number): Date => {
+  const [y, m, d] = getYMD(date)
+  const _date = new Date(y, m, d)
+  _date.setMonth(m + diff)
+  return _date
+}
+
+export const addYears = (date: DateInput, diff: number): Date => {
+  const [y, m, d] = getYMD(date)
+  const _date = new Date(y, m, d)
+  _date.setFullYear(y + diff)
+  return _date
+}
+
+export const addDays = (date: DateInput, diff: number): Date => {
+  const [y, m, d] = getYMD(date)
+  const _date = new Date(y, m, d)
+  _date.setDate(d + diff)
+  return _date
+}
+
+export const timeAgo = (date: DateInput): [string, number] => {
+  const diff = Date.now() - new Date(date).getTime()
+  const s_total = Math.floor(diff / MS_PER_SECOND)
+  const mm_total = Math.floor(diff / MS_PER_MINUTE)
+  const h_total = Math.floor(diff / MS_PER_HOUR)
+  const d_total = Math.floor(diff / MS_PER_DAY)
+  const M_total = Math.floor(d_total / 30)
+  const y_total = Math.floor(M_total / 12)
+  if (s_total < 60) {
+    return ['seconds_ago', s_total]
+  } else if (mm_total < 60) {
+    return ['minutes_ago', mm_total]
+  } else if (h_total < 24) {
+    return ['hours_ago', h_total]
+  } else if (d_total <= 30) {
+    return ['days_ago', d_total]
+  } else if (M_total <= 12) {
+    return ['months_ago', M_total]
+  } else {
+    return ['years_ago', y_total]
+  }
+}
+
+export const getDateRange = (day: number): [number, number] => {
+  const today = new Date()
+  const start = addDays(today, -(day - 1)).getTime()
+  const end = addDays(today, 1).getTime()
+  return [start, end]
+}
+
+export const isToday = (date: DateInput): boolean => {
+  const [y, m, d] = getYMD(date)
+  const [ty, tm, td] = getYMD()
+  return y === ty && m === tm && d === td
+}
+
+export const dateFormat = (date?: DateInput, format: string = 'YYYY-MM-DD hh:mm:ss'): string => {
+  const [y, m, d, h, mm, s] = getYMD(date)
+  return format
+    .replace('YYYY', String(y))
+    .replace('MM', pad(m + 1))
+    .replace('DD', pad(d))
+    .replace('hh', pad(h))
+    .replace('mm', pad(mm))
+    .replace('ss', pad(s))
+}
