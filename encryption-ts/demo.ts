@@ -4,13 +4,13 @@ import { getDefaultSecret } from './key';
 const secret = getDefaultSecret();
 const sourceText = '<h1>Hello from the TS example</h1>';
 
-const encryptedBundle = encryptText(sourceText, secret);
-const decryptedText = decryptText(encryptedBundle, secret);
+const encryptedText = encryptText(sourceText, secret);
+const decryptedText = decryptText(encryptedText, secret);
 
 console.log('Generated secret:');
 console.log(secret);
 console.log('');
-console.log('Encrypted bundle:');
-console.log(JSON.stringify(encryptedBundle, null, 2));
+console.log('Encrypted text:');
+console.log(encryptedText);
 console.log('\nDecrypted text:');
 console.log(decryptedText);
