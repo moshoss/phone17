@@ -1,23 +1,25 @@
 import crypto from 'node:crypto';
 
 export const ENCRYPTION_ALGORITHM = 'aes-256-gcm';
-export const AUTH_TAG_LENGTH = 16;
-export const FIXED_IV_BASE64 = 'QUJDREVGR0hJSktM';
+export const ENCRYPTED_FILE_PREFIX = 'encfile';
+export const ENCRYPTED_FILE_SEPARATOR = ',';
 
 function deriveKey(secret: string): Buffer {
   return crypto.createHash('sha256').update(secret).digest();
 }
 
-function getFixedIv(): Buffer {
-  return Buffer.from(FIXED_IV_BASE64, 'base64');
-}
-
 export function encryptText(plainText: string, secret: string): string {
-  const cipher = crypto.createCipheriv(ENCRYPTION_ALGORITHM, deriveKey(secret), getFixedIv());
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv(ENCRYPTION_ALGORITHM, deriveKey(secret), iv);
   const ciphertext = Buffer.concat([cipher.update(plainText, 'utf8'), cipher.final()]);
   const tag = cipher.getAuthTag();
 
-  return Buffer.concat([tag, ciphertext]).toString('base64');
+  return [
+    ENCRYPTED_FILE_PREFIX,
+    iv.toString('base64'),
+    tag.toString('base64'),
+    ciphertext.toString('base64'),
+  ].join(ENCRYPTED_FILE_SEPARATOR);
 }
 
 export function decryptText(encryptedText: string, secret: string): string {
@@ -25,24 +27,28 @@ export function decryptText(encryptedText: string, secret: string): string {
     throw new Error('Unsupported encrypted bundle');
   }
 
-  const payload = Buffer.from(encryptedText, 'base64');
-  const tag = payload.subarray(0, AUTH_TAG_LENGTH);
-  const ciphertext = payload.subarray(AUTH_TAG_LENGTH);
+  const [prefix, ivBase64, tagBase64, ciphertextBase64] = encryptedText.split(
+    ENCRYPTED_FILE_SEPARATOR
+  );
 
-  if (tag.length !== AUTH_TAG_LENGTH || ciphertext.length === 0) {
+  if (!prefix || !ivBase64 || !tagBase64 || !ciphertextBase64) {
     throw new Error('Invalid encrypted payload');
+  }
+
+  if (prefix !== ENCRYPTED_FILE_PREFIX) {
+    throw new Error(`Unsupported encrypted prefix: ${prefix}`);
   }
 
   const decipher = crypto.createDecipheriv(
     ENCRYPTION_ALGORITHM,
     deriveKey(secret),
-    getFixedIv()
+    Buffer.from(ivBase64, 'base64')
   );
 
-  decipher.setAuthTag(tag);
+  decipher.setAuthTag(Buffer.from(tagBase64, 'base64'));
 
   const plainText = Buffer.concat([
-    decipher.update(ciphertext),
+    decipher.update(Buffer.from(ciphertextBase64, 'base64')),
     decipher.final(),
   ]);
 
