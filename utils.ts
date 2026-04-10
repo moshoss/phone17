@@ -70,3 +70,44 @@ function createAppMenu() {
   Menu.setApplicationMenu(Menu.buildFromTemplate(template))
 }
 
+mainWindow.loadURL(`app://render/index.html`);
+
+function createHtmlResponse(relativePath) {
+  console.log('relativePath', relativePath);
+  try {
+    return new Response(getRendererHtml(), {
+      headers: {
+        'content-type': 'text/html; charset=utf-8',
+        'cache-control': 'no-store',
+      },
+    });
+  } catch (error) {
+    return new Response(error.message, {
+      status: 500,
+      headers: {
+        'content-type': 'text/plain; charset=utf-8',
+        'cache-control': 'no-store',
+      },
+    });
+  }
+}
+
+
+protocol.handle(APP_PROTOCOL_SCHEME, request => {
+  const url = new URL(request.url);
+  const pathname = decodeURIComponent(url.pathname);
+  
+  const relativePath = pathname.slice(1)
+
+  if (relativePath.endsWith('.html')) {
+    return createHtmlResponse(relativePath);
+  }
+
+  const assetPath = path.resolve(__dirname, relativePath);
+
+  if (!assetPath || !fs.existsSync(assetPath) || !fs.statSync(assetPath).isFile()) {
+    return new Response('Not Found', { status: 404 });
+  }
+
+  return net.fetch(pathToFileURL(assetPath).toString());
+});
